@@ -1,396 +1,616 @@
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="cs">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#101827">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="QR Kontrola">
-<title>QR Kontrola 4.1</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<title>QR Kontrola 4.2</title>
 <style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#f8fafc;background:#0b1220;color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:#101827;color:white;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
-main{max-width:600px;margin:auto;padding:18px 14px 35px}
-h1{font-size:27px;margin:0 0 5px}
-p{color:#b9c5d6;line-height:1.5}
-.card{background:#1d2a40;border:1px solid #35445c;border-radius:18px;padding:16px;margin:15px 0}
-button{width:100%;background:#3479f3;color:white;border:0;border-radius:13px;padding:17px;font-size:18px;font-weight:800;margin:8px 0;cursor:pointer}
-button:disabled{opacity:.5}
-.secondary{background:#35465f}
-video{display:block;width:100%;background:#080e18;border-radius:12px;min-height:230px;max-height:380px;object-fit:cover}
-#status{font-size:14px;white-space:pre-wrap;word-break:break-word}
-.hidden{display:none!important}
-.result{text-align:center;padding:22px 10px;border-radius:18px;margin:12px 0}
-.ok{background:#10653b;border:2px solid #40d78d}
-.bad{background:#912c3c;border:2px solid #ff7285}
-.resultTitle{font-size:38px;font-weight:900}
-.resultLabel{font-size:14px;letter-spacing:1px;margin:18px 0 5px}
-.bigCode{font-weight:900;line-height:1.08;letter-spacing:-1px;overflow-wrap:anywhere;width:100%;padding:16px 0;color:white}
-.bigCode.short{font-size:clamp(30px,10.5vw,64px);white-space:nowrap;letter-spacing:-1.5px;font-stretch:condensed}
-.bigCode.medium{font-size:clamp(27px,7vw,45px)}
-.bigCode.long{font-size:clamp(22px,5.5vw,35px)}
-.stats{display:flex;justify-content:space-around;text-align:center}
-.stats strong{display:block;font-size:27px}
-.stats span{font-size:12px;color:#b9c5d6}
-textarea{width:100%;background:#101827;color:white;border:1px solid #64748b;border-radius:10px;padding:12px;min-height:75px}
-small{color:#9eacc0;line-height:1.5}
-details{margin-top:12px}
-summary{cursor:pointer;color:#c9dcff}
-.value{overflow-wrap:anywhere;background:#101827;padding:10px;border-radius:9px}
+body{margin:0;padding:16px 14px 40px;max-width:700px;margin-inline:auto}
+h1{font-size:1.45rem;margin:0}
+small,.muted{color:#a7b4c8}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.pill{border-radius:999px;background:#1f2937;padding:6px 10px;font-size:.8rem}
+.camera{position:relative;border-radius:16px;overflow:hidden;background:#020617;aspect-ratio:4/3;border:1px solid #334155}
+video{width:100%;height:100%;object-fit:cover;display:block}
+.reticle{position:absolute;inset:19%;border:2px solid #7dd3fc;border-radius:16px;pointer-events:none;opacity:.8}
+.camera-label{position:absolute;bottom:9px;left:10px;right:10px;background:#020617b8;padding:8px;border-radius:9px;text-align:center;font-size:.9rem}
+.panel{background:#162235;border:1px solid #334155;border-radius:14px;padding:14px;margin-top:12px}
+.status{font-weight:700;font-size:1.08rem}
+.result{font-size:2.1rem;font-weight:900;text-align:center;overflow-wrap:anywhere;margin:8px 0}
+.success{background:#075b35;border-color:#22c55e}
+.failure{background:#701d28;border-color:#fb7185}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+button{font:inherit;font-weight:750;border:0;border-radius:12px;padding:14px 10px;background:#2563eb;color:white;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+.secondary{background:#334155}
+.wide{grid-column:1/-1}
+.stats{display:flex;justify-content:space-between;gap:12px}
+.stats strong{font-size:1.3rem}
+details{margin-top:14px}
+input{width:100%;font:inherit;padding:12px;border:1px solid #64748b;border-radius:10px;background:#0b1220;color:white;margin:6px 0}
+.tiny{font-size:.85rem;line-height:1.45}
+#cameraNote{margin-top:8px}
 </style>
 </head>
 <body>
-<main>
-<h1>▣ QR Kontrola 4.1</h1>
-<p>Automatické porovnání dvou QR kódů</p>
+<header class="top">
+  <div>
+    <h1>QR Kontrola <small>4.2</small></h1>
+    <small>Dva QR kódy · porovnání obsahu</small>
+  </div>
+  <span class="pill" id="camState">Kamera vypnutá</span>
+</header>
 
-<div class="card" id="scanPanel">
-<h2 id="heading">1. První QR kód</h2>
-<p id="hint">Naskenuj první QR kód.</p>
-<video id="video" autoplay muted playsinline></video>
-<button id="start">Spustit fotoaparát</button>
-<p id="status">Připraveno ke kontrole.</p>
+<div class="camera">
+  <video id="video" autoplay playsinline muted></video>
+  <div class="reticle"></div>
+  <div class="camera-label" id="cameraHint">
+    Spusťte kameru a namiřte na první QR kód.
+  </div>
+</div>
+
+<div class="actions">
+  <button id="start">Spustit fotoaparát</button>
+  <button class="secondary" id="stop">Vypnout kameru</button>
+</div>
+
+<div id="cameraNote" class="tiny muted">
+  Kamera po úspěšné kontrole zůstává zapnutá.
+  První spuštění vyžaduje povolení přístupu.
+</div>
+
+<section class="panel" id="resultPanel" aria-live="polite">
+  <div class="status" id="status">
+    Připraveno k načtení prvního QR kódu.
+  </div>
+  <div class="result" id="result"></div>
+  <div class="tiny muted" id="details"></div>
+</section>
+
+<div class="actions">
+  <button class="wide" id="next">Další kontrola</button>
+</div>
+
+<section class="panel stats">
+  <div>Shoda<br><strong id="okCount">0</strong></div>
+  <div>Neshoda<br><strong id="badCount">0</strong></div>
+  <div>Celkem<br><strong id="totalCount">0</strong></div>
+</section>
+
 <details>
-<summary>Ruční zadání pro test</summary>
-<textarea id="manual" placeholder="Obsah QR kódu"></textarea>
-<button id="confirm" class="secondary">Potvrdit kód</button>
+  <summary>Ruční zadání (záložní možnost)</summary>
+  <p class="tiny muted">
+    Při špatném osvětlení můžete zadat obsah QR ručně.
+    Platí stejný postup jako při skenování.
+  </p>
+  <input id="manual" autocomplete="off" placeholder="Obsah QR kódu">
+  <button id="manualAdd">Potvrdit kód</button>
 </details>
-</div>
 
-<div class="card hidden" id="resultPanel">
-<div id="resultBox" class="result">
-<div id="resultTitle" class="resultTitle"></div>
-<div id="resultLabel" class="resultLabel"></div>
-<div id="bigCode" class="bigCode"></div>
-<p id="resultHint" style="color:white"></p>
-</div>
-<button id="next">Další kontrola</button>
-<details>
-<summary>Zobrazit oba QR kódy</summary>
-<p>První QR:</p><div id="firstValue" class="value"></div>
-<p>Druhý QR:</p><div id="secondValue" class="value"></div>
-</details>
-</div>
+<p class="tiny muted">
+  Podklad je pouze pomocná kontrola.
+  Aplikace vyžaduje, aby první QR kód zmizel ze záběru.
+  Vzhledem k proměnlivému osvětlení nelze pouze z kamery
+  stoprocentně zaručit, že jde o dva různé fyzické štítky.
+</p>
 
-<div class="card">
-<h3>Statistika</h3>
-<div class="stats">
-<div><strong id="total">0</strong><span>Kontrol</span></div>
-<div><strong id="matches">0</strong><span>Shoda</span></div>
-<div><strong id="errors">0</strong><span>Neshoda</span></div>
-</div>
-<button id="reset" class="secondary">Vynulovat statistiku</button>
-</div>
-
-<small>
-Kódy se porovnávají podle celého obsahu bez omezení délky.
-Rozpoznávání podkladu je pomocná kontrola a vyžaduje
-ověření na skutečných materiálech.
-</small>
-</main>
-
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
-"use strict";
+(()=>{
+'use strict';
 
-const el=id=>document.getElementById(id);
+const $=id=>document.getElementById(id);
+const video=$('video');
+const canvas=document.createElement('canvas');
+const ctx=canvas.getContext('2d',{willReadFrequently:true});
 
-let stage=0;
-let first="";
-let firstBackground=null;
 let stream=null;
 let detector=null;
-let active=false;
-let processing=false;
-let scanBusy=false;
-let total=0,matches=0,errors=0;
-
+let loopId=null;
+let busy=false;
+let phase='first';
+let first=null;
+let firstLight=null;
 let missingFrames=0;
-let oppositeFrames=0;
-let lastScanTime=0;
-let previousCodeVisible=false;
+let stable=null;
+let stableFrames=0;
+let lastReadAt=0;
+let scanToken=0;
+let ok=0;
+let bad=0;
 
-const canvas=document.createElement("canvas");
-const ctx=canvas.getContext("2d",{willReadFrequently:true});
+const RELEASE_FRAMES=5;
+const STABLE_FRAMES=2;
+const LIGHT_DIFF=13;
+const SCAN_INTERVAL=90;
 
-function status(s){el("status").textContent=s}
-
-function updateStats(){
- el("total").textContent=total;
- el("matches").textContent=matches;
- el("errors").textContent=errors;
+function setStatus(msg,hint){
+  $('status').textContent=msg;
+  if(hint)$('cameraHint').textContent=hint;
 }
 
-function stop(){
- active=false;
- if(stream){
-  stream.getTracks().forEach(t=>t.stop());
-  stream=null;
- }
- el("video").srcObject=null;
+function resetScan(){
+  scanToken++;
+  phase='first';
+  first=null;
+  firstLight=null;
+  missingFrames=0;
+  stable=null;
+  stableFrames=0;
+  $('result').textContent='';
+  $('details').textContent='';
+  $('resultPanel').className='panel';
+  setStatus(
+    'Čekám na první QR kód.',
+    '1/2 · Načtěte první QR kód.'
+  );
 }
 
-function loadFallback(){
- return new Promise((resolve,reject)=>{
-  if(window.jsQR){resolve();return}
-  const s=document.createElement("script");
-  s.src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js";
-  s.onload=resolve;
-  s.onerror=()=>reject(new Error("Nepodařilo se načíst QR skener."));
-  document.head.appendChild(s);
- });
+function updateCounts(){
+  $('okCount').textContent=ok;
+  $('badCount').textContent=bad;
+  $('totalCount').textContent=ok+bad;
 }
 
-function classifyBackground(imageData,width,height){
- const data=imageData.data;
- let sum=0,count=0;
+function finish(second){
+  phase='done';
+  const match=second===first;
 
- // Vzorkování vnější oblasti snímku.
- // Jde o odhad okolního podkladu, nikoliv
- // o spolehlivé určení barvy přímo kolem QR.
- const step=8;
- for(let y=0;y<height;y+=step){
-  for(let x=0;x<width;x+=step){
-   const nx=x/width,ny=y/height;
-   const outer=nx<.18||nx>.82||ny<.18||ny>.82;
-   if(!outer)continue;
-   const i=(y*width+x)*4;
-   const brightness=
-    .2126*data[i]+
-    .7152*data[i+1]+
-    .0722*data[i+2];
-   sum+=brightness;
-   count++;
+  if(match)ok++;
+  else bad++;
+
+  updateCounts();
+
+  $('resultPanel').className=
+    'panel '+(match?'success':'failure');
+
+  $('status').textContent=
+    match?'✓ SHODA':'✕ NESHODA';
+
+  $('result').textContent=
+    match?second:'KÓDY SE LIŠÍ';
+
+  $('details').textContent=match
+    ?'Kontrola úspěšná. Stiskněte „Další kontrola“.'
+    :`První: ${first} | Druhý: ${second}`;
+
+  $('cameraHint').textContent=
+    'Kamera běží · stiskněte Další kontrola.';
+}
+
+function luminance(r,g,b){
+  return .2126*r+.7152*g+.0722*b;
+}
+
+function measureBackground(data,w,h,points){
+  // Měření okolí QR, nikoli jeho černých modulů.
+  if(!points||points.length<4)return null;
+
+  const xs=points.map(p=>p.x);
+  const ys=points.map(p=>p.y);
+
+  const minX=Math.max(0,Math.min(...xs));
+  const maxX=Math.min(w,Math.max(...xs));
+  const minY=Math.max(0,Math.min(...ys));
+  const maxY=Math.min(h,Math.max(...ys));
+
+  const width=maxX-minX;
+  const height=maxY-minY;
+
+  if(width<20||height<20)return null;
+
+  const margin=Math.max(
+    5,
+    Math.min(width,height)*.06
+  );
+
+  const vals=[];
+
+  for(let side=0;side<4;side++){
+    for(let i=1;i<=15;i++){
+      const t=i/16;
+      let x,y;
+
+      if(side===0){
+        x=minX+t*width;
+        y=minY-margin;
+      }
+      if(side===1){
+        x=minX+t*width;
+        y=maxY+margin;
+      }
+      if(side===2){
+        x=minX-margin;
+        y=minY+t*height;
+      }
+      if(side===3){
+        x=maxX+margin;
+        y=minY+t*height;
+      }
+
+      x=Math.round(x);
+      y=Math.round(y);
+
+      if(x<0||y<0||x>=w||y>=h)continue;
+
+      const k=(y*w+x)*4;
+
+      vals.push(
+        luminance(
+          data[k],
+          data[k+1],
+          data[k+2]
+        )
+      );
+    }
   }
- }
- if(!count)return null;
- const average=sum/count;
- if(average<95)return "dark";
- if(average>155)return "light";
- return null;
+
+  if(vals.length<12)return null;
+
+  vals.sort((a,b)=>a-b);
+  return vals[Math.floor(vals.length/2)];
 }
 
-function getFrame(){
- const video=el("video");
- if(video.readyState<2||!video.videoWidth)return null;
- const scale=Math.min(1,640/video.videoWidth);
- canvas.width=Math.round(video.videoWidth*scale);
- canvas.height=Math.round(video.videoHeight*scale);
- ctx.drawImage(video,0,0,canvas.width,canvas.height);
- return ctx.getImageData(0,0,canvas.width,canvas.height);
+function getPointsNative(code){
+  const p=code.cornerPoints;
+
+  if(p&&p.length>=4)return p;
+
+  const b=code.boundingBox;
+  if(!b)return null;
+
+  return [
+    {x:b.left,y:b.top},
+    {x:b.right,y:b.top},
+    {x:b.right,y:b.bottom},
+    {x:b.left,y:b.bottom}
+  ];
 }
 
-async function startCamera(){
- if(active||processing||stage===2)return;
- processing=true;
- el("start").disabled=true;
- status("Žádám o přístup k fotoaparátu...");
- try{
-  if(!window.isSecureContext)
-   throw new Error("Otevři aplikaci přes HTTPS.");
-  if(!navigator.mediaDevices?.getUserMedia)
-   throw new Error("Prohlížeč nepodporuje fotoaparát.");
-
-  detector=null;
-  if("BarcodeDetector" in window){
-   try{
-    const formats=await BarcodeDetector.getSupportedFormats();
-    if(formats.includes("qr_code"))
-     detector=new BarcodeDetector({formats:["qr_code"]});
-   }catch(e){}
+function decodeFrame(image){
+  if(detector){
+    return detector.detect(canvas).then(items=>
+      items.map(x=>({
+        value:x.rawValue,
+        points:getPointsNative(x)
+      }))
+    );
   }
-  if(!detector)await loadFallback();
 
-  stream=await navigator.mediaDevices.getUserMedia({
-   audio:false,
-   video:{facingMode:{ideal:"environment"}}
-  });
-  el("video").srcObject=stream;
-  await el("video").play();
-  active=true;
-  el("start").classList.add("hidden");
-  status("Fotoaparát běží. Namiř na QR kód.");
-  requestAnimationFrame(scan);
- }catch(e){
-  stop();
-  status("CHYBA: "+(e.name==="NotAllowedError"?
-   "Povol přístup k fotoaparátu v Safari.":
-   e.message||String(e)));
-  el("start").classList.remove("hidden");
- }finally{
-  processing=false;
-  el("start").disabled=false;
- }
+  if(typeof jsQR==='function'){
+    const q=jsQR(
+      image.data,
+      image.width,
+      image.height,
+      {inversionAttempts:'attemptBoth'}
+    );
+
+    if(!q)return Promise.resolve([]);
+
+    const l=q.location;
+
+    return Promise.resolve([{
+      value:q.data,
+      points:[
+        l.topLeftCorner,
+        l.topRightCorner,
+        l.bottomRightCorner,
+        l.bottomLeftCorner
+      ]
+    }]);
+  }
+
+  throw Error(
+    'QR knihovna se nenačetla. Zkontrolujte internet.'
+  );
+}
+
+function onNoQR(){
+  stable=null;
+  stableFrames=0;
+
+  if(phase==='waitRelease'){
+    missingFrames++;
+
+    if(missingFrames>=RELEASE_FRAMES){
+      phase='second';
+      setStatus(
+        'První QR zmizel. Čekám na druhý.',
+        '2/2 · Načtěte druhý QR kód.'
+      );
+    }
+  }
+}
+
+function processQR(item,image){
+  if(!item||!item.value){
+    onNoQR();
+    return;
+  }
+
+  const value=String(item.value);
+  const light=measureBackground(
+    image.data,
+    image.width,
+    image.height,
+    item.points
+  );
+
+  if(phase==='done')return;
+
+  if(phase==='waitRelease'){
+    missingFrames=0;
+    return;
+  }
+
+  if(stable===value){
+    stableFrames++;
+  }else{
+    stable=value;
+    stableFrames=1;
+  }
+
+  if(stableFrames<STABLE_FRAMES)return;
+
+  if(phase==='first'){
+    first=value;
+    firstLight=light;
+    phase='waitRelease';
+    missingFrames=0;
+    stable=null;
+    stableFrames=0;
+
+    setStatus(
+      `První QR načten: ${value}`,
+      'Oddalte první QR kód z obrazu.'
+    );
+    return;
+  }
+
+  if(phase==='second'){
+    // Rozdíl podkladů pouze upozorní.
+    // Nikdy nezablokuje správně přečtený QR.
+    const diff=
+      firstLight==null||light==null
+        ?null
+        :Math.abs(light-firstLight);
+
+    finish(value);
+
+    if(diff!==null&&diff<LIGHT_DIFF){
+      $('details').textContent+=
+        ' · Upozornění: okolní podklady vypadají podobně.';
+    }
+  }
 }
 
 async function scan(){
- if(!active||scanBusy)return;
- scanBusy=true;
- try{
-  const frame=getFrame();
-  if(frame){
-   const w=canvas.width,h=canvas.height;
-   let value=null;
-   let detected=false;
+  if(!stream||video.readyState<2||busy)return;
 
-   if(detector){
-    const codes=await detector.detect(canvas);
-    if(codes.length){
-     value=codes[0].rawValue;
-     detected=true;
-    }
-   }else if(window.jsQR){
-    const code=jsQR(frame.data,w,h,{
-     inversionAttempts:"attemptBoth"
-    });
-    if(code){
-     value=code.data;
-     detected=true;
-    }
-   }
+  const now=performance.now();
 
-   const bg=classifyBackground(frame,w,h);
+  if(now-lastReadAt<SCAN_INTERVAL)return;
+  lastReadAt=now;
 
-   if(stage===0&&detected){
-    first=value;
-    firstBackground=bg;
-    stage=1;
-    missingFrames=0;
-    oppositeFrames=0;
-    previousCodeVisible=true;
-    lastScanTime=Date.now();
-    el("heading").textContent="2. Druhý QR kód";
-    el("hint").textContent="Přesuň kameru na druhý QR kód.";
-    status("První QR uložen. Nyní načti druhý QR.");
-   }else if(stage===1){
-    if(!detected){
-     missingFrames++;
-     if(missingFrames>=5)previousCodeVisible=false;
-     oppositeFrames=0;
-    }else{
-     if(previousCodeVisible){
-      status("Oddal první QR kód ze záběru.");
-     }else if(Date.now()-lastScanTime<1000){
-      status("Připravuji druhé načtení...");
-     }else if(firstBackground===null||bg===null){
-      status("Nelze jednoznačně rozlišit podklad. Změň úhel nebo osvětlení.");
-     }else if(bg===firstBackground){
-      oppositeFrames=0;
-      status("Čekám na QR kód s opačným podkladem.");
-     }else{
-      oppositeFrames++;
-      if(oppositeFrames>=3){
-       acceptSecond(value);
-       return;
-      }
-      status("Ověřuji druhý QR kód...");
-     }
+  busy=true;
+  const token=scanToken;
+
+  try{
+    const vw=video.videoWidth;
+    const vh=video.videoHeight;
+
+    if(!vw||!vh)return;
+
+    const scale=Math.min(
+      1,
+      800/Math.max(vw,vh)
+    );
+
+    canvas.width=Math.round(vw*scale);
+    canvas.height=Math.round(vh*scale);
+
+    ctx.drawImage(
+      video,
+      0,0,
+      canvas.width,
+      canvas.height
+    );
+
+    const image=ctx.getImageData(
+      0,0,
+      canvas.width,
+      canvas.height
+    );
+
+    const items=await decodeFrame(image);
+
+    if(token!==scanToken)return;
+    if(phase==='done')return;
+
+    if(!items.length){
+      onNoQR();
+      return;
     }
-   }
+
+    if(items.length>1){
+      stable=null;
+      stableFrames=0;
+      setStatus(
+        'V záběru je více QR kódů.',
+        'Namiřte na jeden QR kód.'
+      );
+      return;
+    }
+
+    processQR(items[0],image);
+
+  }catch(err){
+    if(phase!=='done'){
+      $('cameraNote').textContent=
+        'Chyba čtení: '+err.message;
+    }
+  }finally{
+    busy=false;
   }
- }catch(e){
-  status("Chyba skenování: "+e.message);
- }finally{
-  scanBusy=false;
- }
- if(active)setTimeout(()=>requestAnimationFrame(scan),150);
 }
 
-function sound(ok){
- try{
-  const A=window.AudioContext||window.webkitAudioContext;
-  if(!A)return;
-  const a=new A(),o=a.createOscillator(),g=a.createGain();
-  o.connect(g);g.connect(a.destination);
-  o.frequency.value=ok?900:280;
-  g.gain.value=.08;
-  o.start();o.stop(a.currentTime+.22);
-  o.onended=()=>a.close();
- }catch(e){}
+function runLoop(){
+  if(loopId!==null)return;
+
+  loopId=setInterval(
+    scan,
+    SCAN_INTERVAL
+  );
 }
 
-function showResult(second){
- stop();
- stage=2;
- const ok=first===second;
- total++;
- if(ok)matches++;else errors++;
- updateStats();
+async function startCamera(){
+  if(stream){
+    runLoop();
+    return;
+  }
 
- el("resultBox").className="result "+(ok?"ok":"bad");
- el("resultTitle").textContent=ok?"✓ SHODA":"✕ NESHODA";
- el("resultLabel").textContent=ok?"OVĚŘENÝ QR KÓD":"ROZDÍLNÉ QR KÓDY";
+  if(!navigator.mediaDevices?.getUserMedia){
+    setStatus(
+      'Tento prohlížeč nepodporuje kameru.'
+    );
+    return;
+  }
 
- const code=el("bigCode");
- code.textContent=ok?first:"";
- code.className="bigCode "+(
-  first.length<=10?"short":
-  first.length<=20?"medium":"long"
- );
+  $('start').disabled=true;
+  $('camState').textContent='Spouštím…';
 
- el("resultHint").textContent=ok?
-  "Oba QR kódy obsahují přesně stejná data.":
-  "Obsah QR kódů se liší. Zkontroluj výrobek.";
+  try{
+    if('BarcodeDetector' in window){
+      try{
+        const supported=
+          await BarcodeDetector.getSupportedFormats();
 
- el("firstValue").textContent=first;
- el("secondValue").textContent=second;
- el("scanPanel").classList.add("hidden");
- el("resultPanel").classList.remove("hidden");
- sound(ok);
- window.scrollTo({top:0,behavior:"smooth"});
+        if(supported.includes('qr_code')){
+          detector=new BarcodeDetector({
+            formats:['qr_code']
+          });
+        }
+      }catch(e){
+        detector=null;
+      }
+    }
+
+    stream=await navigator.mediaDevices.getUserMedia({
+      audio:false,
+      video:{
+        facingMode:{ideal:'environment'},
+        width:{ideal:1280},
+        height:{ideal:720}
+      }
+    });
+
+    video.srcObject=stream;
+    await video.play();
+
+    $('camState').textContent=
+      '● Kamera aktivní';
+
+    $('cameraNote').textContent=
+      'Fotoaparát běží nepřetržitě. '+
+      'Po SHODĚ stačí stisknout Další kontrola.';
+
+    runLoop();
+
+    if(phase==='first'){
+      setStatus(
+        'Čekám na první QR kód.',
+        '1/2 · Načtěte první QR kód.'
+      );
+    }
+
+  }catch(err){
+    stream?.getTracks().forEach(t=>t.stop());
+    stream=null;
+
+    $('camState').textContent='Kamera vypnutá';
+    setStatus('Nelze spustit fotoaparát.');
+
+    $('cameraNote').textContent=
+      'Povolte přístup ke kameře v Safari. Detail: '+
+      err.message;
+
+  }finally{
+    $('start').disabled=false;
+  }
 }
 
-function acceptSecond(value){
- if(stage!==1)return;
- showResult(value);
+function stopCamera(){
+  scanToken++;
+
+  if(loopId!==null){
+    clearInterval(loopId);
+    loopId=null;
+  }
+
+  stream?.getTracks().forEach(t=>t.stop());
+  stream=null;
+  video.srcObject=null;
+
+  $('camState').textContent='Kamera vypnutá';
+  $('cameraHint').textContent=
+    'Fotoaparát je vypnutý.';
 }
 
-el("start").addEventListener("click",startCamera);
+$('start').addEventListener(
+  'click',
+  startCamera
+);
 
-el("confirm").addEventListener("click",()=>{
- const value=el("manual").value;
- if(!value){status("Zadej obsah QR kódu.");return}
- if(stage===0){
-  first=value;
-  firstBackground=null;
-  stage=1;
-  el("heading").textContent="2. Druhý QR kód";
-  status("První QR uložen. Pro ruční test vlož druhý.");
-  el("manual").value="";
- }else if(stage===1){
-  showResult(value);
- }
+$('stop').addEventListener(
+  'click',
+  stopCamera
+);
+
+$('next').addEventListener('click',()=>{
+  resetScan();
+
+  // Kamera se nerestartuje, pokud už běží.
+  if(!stream)startCamera();
 });
 
-el("next").addEventListener("click",()=>{
- stop();
- stage=0;
- first="";
- firstBackground=null;
- missingFrames=0;
- oppositeFrames=0;
- previousCodeVisible=false;
- el("heading").textContent="1. První QR kód";
- el("hint").textContent="Naskenuj první QR kód.";
- el("start").classList.remove("hidden");
- el("scanPanel").classList.remove("hidden");
- el("resultPanel").classList.add("hidden");
- el("manual").value="";
- status("Připraveno na další kontrolu.");
+$('manualAdd').addEventListener('click',()=>{
+  const v=$('manual').value.trim();
+  if(!v)return;
+
+  $('manual').value='';
+
+  if(phase==='done')resetScan();
+
+  if(phase==='first'){
+    first=v;
+    firstLight=null;
+    phase='second';
+
+    setStatus(
+      `První QR zadán: ${v}`,
+      '2/2 · Načtěte nebo zadejte druhý QR.'
+    );
+
+  }else if(
+    phase==='waitRelease'||
+    phase==='second'
+  ){
+    finish(v);
+  }
 });
 
-el("reset").addEventListener("click",()=>{
- total=matches=errors=0;
- updateStats();
-});
+window.addEventListener(
+  'pagehide',
+  stopCamera
+);
 
-document.addEventListener("visibilitychange",()=>{
- if(document.hidden&&active){
-  stop();
-  el("start").classList.remove("hidden");
-  status("Fotoaparát pozastaven.");
- }
-});
+resetScan();
+
+})();
 </script>
 </body>
 </html>
