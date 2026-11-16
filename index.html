@@ -1,16 +1,311 @@
-#number {
-    font-size: clamp(60px, 22vw, 220px);
-    font-weight: 900;
-    line-height: 1.05;
-    overflow-wrap: anywhere;
-    color: white;
+
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR ČTEČKA 5.3</title>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
 }
 
-#result {
-    padding: 40px 4px;
-    min-height: 35vh;
+body {
+    margin: 0;
+    padding: 10px;
+    background: #101827;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    font-size: 22px;
 }
 
 video {
-    max-height: 25vh;
+    display: block;
+    width: 100%;
+    height: 28vh;
+    object-fit: contain;
+    background: black;
+    border-radius: 12px;
 }
+
+button {
+    width: 100%;
+    padding: 18px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 12px;
+    background: #2563eb;
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+#result {
+    margin-top: 12px;
+    padding: 20px 4px;
+    min-height: 35vh;
+    background: #263345;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+#result.active {
+    background: #00852c;
+}
+
+#number {
+    font-size: clamp(48px, 24vw, 220px);
+    font-weight: 900;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+}
+
+#status {
+    margin-top: 15px;
+    font-size: 16px;
+}
+
+#label {
+    font-size: 18px;
+    margin-bottom: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>QR ČTEČKA 5.3</h1>
+
+<video id="video" autoplay muted playsinline></video>
+
+<button id="start">SPUSTIT KAMERU</button>
+
+<div id="result">
+    <div id="label">ČEKÁM NA QR</div>
+    <div id="number">—</div>
+</div>
+
+<div id="status">Kamera vypnutá</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const video = $("video");
+const canvas = document.createElement("canvas");
+
+const ctx = canvas.getContext("2d", {
+    willReadFrequently: true
+});
+
+let stream = null;
+let running = false;
+let lastCode = null;
+let lastScan = 0;
+let audio = null;
+let frame = 0;
+
+function beep() {
+    try {
+        if (!audio) return;
+
+        const oscillator = audio.createOscillator();
+        const gain = audio.createGain();
+
+        oscillator.connect(gain);
+        gain.connect(audio.destination);
+
+        oscillator.frequency.value = 1000;
+        gain.gain.value = 0.15;
+
+        oscillator.start();
+        oscillator.stop(audio.currentTime + 0.15);
+    } catch (e) {}
+}
+
+async function startCamera() {
+
+    if (running) return;
+
+    $("start").disabled = true;
+
+    try {
+
+        if (typeof jsQR !== "function") {
+            throw new Error("QR knihovna není dostupná.");
+        }
+
+        const Audio =
+            window.AudioContext ||
+            window.webkitAudioContext;
+
+        if (Audio) {
+            audio = audio || new Audio();
+            audio.resume().catch(() => {});
+        }
+
+        stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                facingMode: {
+                    ideal: "environment"
+                },
+                width: {
+                    ideal: 1280
+                },
+                height: {
+                    ideal: 720
+                }
+            }
+        });
+
+        video.srcObject = stream;
+
+        await video.play();
+
+        running = true;
+
+        $("start").textContent = "KAMERA AKTIVNÍ";
+        $("start").style.background = "#166534";
+
+        $("status").textContent =
+            "Namiřte kameru na QR kód";
+
+        scan();
+
+    } catch (error) {
+
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+        }
+
+        stream = null;
+        running = false;
+
+        $("status").textContent =
+            "Chyba: " + error.message;
+
+        $("start").disabled = false;
+    }
+}
+
+function scan() {
+
+    if (!running) return;
+
+    requestAnimationFrame(scan);
+
+    if (video.readyState < 2) return;
+
+    const now = performance.now();
+
+    if (now - lastScan < 40) return;
+
+    lastScan = now;
+
+    const scale = Math.min(
+        1,
+        960 / Math.max(
+            video.videoWidth,
+            video.videoHeight
+        )
+    );
+
+    const w = Math.round(video.videoWidth * scale);
+    const h = Math.round(video.videoHeight * scale);
+
+    if (!w || !h) return;
+
+    if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+    }
+
+    try {
+
+        ctx.drawImage(video, 0, 0, w, h);
+
+        const image = ctx.getImageData(0, 0, w, h);
+
+        frame++;
+
+        // Střídání černých a bílých QR kódů.
+        if (frame % 2 === 0) {
+
+            for (let i = 0; i < image.data.length; i += 4) {
+
+                image.data[i] = 255 - image.data[i];
+
+                image.data[i + 1] =
+                    255 - image.data[i + 1];
+
+                image.data[i + 2] =
+                    255 - image.data[i + 2];
+            }
+        }
+
+        const qr = jsQR(
+            image.data,
+            w,
+            h,
+            {
+                inversionAttempts: "dontInvert"
+            }
+        );
+
+        if (qr && qr.data) {
+
+            if (qr.data !== lastCode) {
+
+                lastCode = qr.data;
+
+                $("number").textContent = qr.data;
+
+                $("label").textContent = "NAČTENO";
+
+                $("result").classList.add("active");
+
+                $("status").textContent =
+                    "Čekám na další QR kód";
+
+                beep();
+            }
+        }
+
+    } catch (error) {
+
+        $("status").textContent =
+            "Chyba čtení: " + error.message;
+    }
+}
+
+$("start").addEventListener("click", startCamera);
+
+window.addEventListener("pagehide", () => {
+
+    running = false;
+
+    if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+    }
+
+    stream = null;
+    video.srcObject = null;
+
+    $("start").disabled = false;
+    $("start").textContent = "SPUSTIT KAMERU";
+    $("start").style.background = "#2563eb";
+});
+
+</script>
+
+</body>
+</html>
