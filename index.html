@@ -1,515 +1,775 @@
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="cs">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b1220">
-<title>QR Kontrola 4.3</title>
-<style>
-:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#f8fafc;background:#0b1220;color-scheme:dark}
-*{box-sizing:border-box}body{margin:0;padding:16px 14px 40px;max-width:700px;margin-inline:auto}h1{font-size:1.45rem;margin:0}small,.muted{color:#a7b4c8}.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.pill{border-radius:999px;background:#1f2937;padding:6px 10px;font-size:.8rem}.camera{position:relative;border-radius:16px;overflow:hidden;background:#020617;aspect-ratio:4/3;border:1px solid #334155}video{width:100%;height:100%;object-fit:cover;display:block}.reticle{position:absolute;inset:19%;border:2px solid #7dd3fc;border-radius:16px;pointer-events:none;opacity:.8}.camera-label{position:absolute;bottom:9px;left:10px;right:10px;background:#020617b8;padding:8px;border-radius:9px;text-align:center;font-size:.9rem}.panel{background:#162235;border:1px solid #334155;border-radius:14px;padding:14px;margin-top:12px}.status{font-weight:700;font-size:1.08rem}.result{font-size:2.1rem;font-weight:900;text-align:center;overflow-wrap:anywhere;margin:8px 0}.success{background:#075b35;border-color:#22c55e}.failure{background:#701d28;border-color:#fb7185}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}button{font:inherit;font-weight:750;border:0;border-radius:12px;padding:14px 10px;background:#2563eb;color:white;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}.secondary{background:#334155}.wide{grid-column:1/-1}.stats{display:flex;justify-content:space-between;gap:12px}.stats strong{font-size:1.3rem}details{margin-top:14px}input{width:100%;font:inherit;padding:12px;border:1px solid #64748b;border-radius:10px;background:#0b1220;color:white;margin:6px 0}.tiny{font-size:.85rem;line-height:1.45}#cameraNote{margin-top:8px}
-</style>
-</head>
-<body>
+<meta charset="UTF-8">
+<meta name="viewport"
+content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-<header class="top">
-  <div>
-    <h1>QR Kontrola <small>4.3</small></h1>
-    <small>Blok + desky · povinná kontrola polarity</small>
-  </div>
-  <span class="pill" id="camState">Kamera vypnutá</span>
-</header>
-
-<div class="camera">
-  <video id="video" autoplay playsinline muted></video>
-  <div class="reticle"></div>
-  <div class="camera-label" id="cameraHint">
-    Spusťte kameru a namiřte na první QR kód.
-  </div>
-</div>
-
-<div class="actions">
-  <button id="start">Spustit fotoaparát</button>
-  <button class="secondary" id="stop">Vypnout kameru</button>
-</div>
-
-<div id="cameraNote" class="tiny muted">
-  Kamera po úspěšné kontrole zůstává zapnutá. První spuštění vyžaduje povolení přístupu.
-</div>
-
-<section class="panel" id="resultPanel" aria-live="polite">
-  <div class="status" id="status">
-    Připraveno k načtení prvního QR kódu.
-  </div>
-  <div class="result" id="result"></div>
-  <div class="tiny muted" id="details"></div>
-</section>
-
-<div class="actions">
-  <button class="wide" id="next">Další kontrola</button>
-</div>
-
-<section class="panel stats">
-  <div>Shoda<br><strong id="okCount">0</strong></div>
-  <div>Neshoda<br><strong id="badCount">0</strong></div>
-  <div>Celkem<br><strong id="totalCount">0</strong></div>
-</section>
-
-<p class="tiny muted">
-  Černý QR = blok. Bílý QR = desky.
-  Ruční zadání není povoleno, protože neověří polaritu.
-</p>
+<title>QR Kontrola 4.4 FAST</title>
 
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 12px;
+    background: #101827;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    font-size: 23px;
+    margin: 8px 0;
+}
+
+.subtitle {
+    color: #aab8cb;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+.camera {
+    position: relative;
+    overflow: hidden;
+    border-radius: 14px;
+    background: black;
+}
+
+video {
+    width: 100%;
+    max-height: 42vh;
+    object-fit: contain;
+    display: block;
+}
+
+.frame {
+    position: absolute;
+    inset: 15%;
+    border: 2px solid #38bdf8;
+    border-radius: 14px;
+    pointer-events: none;
+}
+
+button {
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    padding: 18px;
+    margin-top: 10px;
+    font-size: 19px;
+    font-weight: bold;
+    color: white;
+    background: #2563eb;
+}
+
+button:disabled {
+    opacity: 0.5;
+}
+
+.codes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.codebox {
+    background: #263345;
+    padding: 15px 5px;
+    border-radius: 12px;
+    min-height: 95px;
+    border: 2px solid transparent;
+}
+
+.loaded {
+    background: #14532d;
+    border-color: #4ade80;
+}
+
+.codevalue {
+    font-size: 14px;
+    margin-top: 10px;
+    overflow-wrap: anywhere;
+}
+
+#status {
+    font-size: 19px;
+    font-weight: bold;
+    padding: 15px 5px;
+}
+
+#result {
+    padding: 20px 5px;
+    border-radius: 15px;
+    margin-top: 10px;
+    font-size: 40px;
+    font-weight: 900;
+}
+
+.green {
+    background: #00852c;
+}
+
+.red {
+    background: #b90000;
+}
+
+.waiting {
+    background: #263345;
+    font-size: 22px !important;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+    font-size: 16px;
+}
+
+.stats strong {
+    display: block;
+    font-size: 25px;
+    margin-top: 6px;
+}
+
+#next {
+    font-size: 27px;
+    padding: 22px;
+}
+
+#note {
+    font-size: 12px;
+    color: #aab8cb;
+    margin-top: 15px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>QR Kontrola 4.4 FAST</h1>
+
+<div class="subtitle">
+    Knižní blok + desky
+</div>
+
+<div class="camera">
+    <video id="video"
+        autoplay
+        muted
+        playsinline>
+    </video>
+
+    <div class="frame"></div>
+</div>
+
+<button id="start" onclick="startCamera()">
+    SPUSTIT KAMERU
+</button>
+
+<div class="codes">
+
+    <div class="codebox" id="blockBox">
+        <strong>BLOK</strong>
+        <div class="codevalue" id="blockValue">
+            Čekám na QR
+        </div>
+    </div>
+
+    <div class="codebox" id="coverBox">
+        <strong>DESKY</strong>
+        <div class="codevalue" id="coverValue">
+            Čekám na QR
+        </div>
+    </div>
+
+</div>
+
+<div id="status">
+    Spusťte kameru
+</div>
+
+<div id="result" class="waiting">
+    ČEKÁM
+</div>
+
+<button id="next" onclick="nextCheck()">
+    DALŠÍ
+</button>
+
+<div class="stats">
+    <div>
+        SHODA
+        <strong id="okCount">0</strong>
+    </div>
+
+    <div>
+        NESHODA
+        <strong id="badCount">0</strong>
+    </div>
+
+    <div>
+        CELKEM
+        <strong id="totalCount">0</strong>
+    </div>
+</div>
+
+<div id="note">
+    Černý QR = blok | Bílý QR = desky
+</div>
+
 <script>
-(()=>{
-'use strict';
 
-const $ = id => document.getElementById(id);
+const video = document.getElementById("video");
 
-const video = $('video');
-const canvas = document.createElement('canvas');
-const ctx = canvas.getContext('2d', {
-  willReadFrequently: true
-});
+const canvas = document.createElement("canvas");
+
+const ctx = canvas.getContext(
+    "2d",
+    { willReadFrequently: true }
+);
 
 let stream = null;
-let loopId = null;
-let busy = false;
-let phase = 'first';
-let first = null;
-let firstType = null;
+let running = false;
+let starting = false;
+let finished = false;
 
-let missingFrames = 0;
-let stable = null;
-let stableFrames = 0;
-let lastReadAt = 0;
-let scanToken = 0;
+let block = null;
+let cover = null;
 
-let ok = 0;
-let bad = 0;
-let audio = null;
+let okCount = 0;
+let badCount = 0;
 
-const RELEASE_FRAMES = 5;
-const STABLE_FRAMES = 2;
-const SCAN_INTERVAL = 90;
+let audioContext = null;
+let lastScan = 0;
+let frameNumber = 0;
+let animationId = null;
 
-const setStatus = (msg, hint) => {
-  $('status').textContent = msg;
-  if (hint) $('cameraHint').textContent = hint;
-};
+// Nastavení rychlosti
 
-function resetScan() {
-  scanToken++;
-  phase = 'first';
-  first = null;
-  firstType = null;
-  missingFrames = 0;
-  stable = null;
-  stableFrames = 0;
+const SCAN_INTERVAL = 40;
+const SCAN_SIZE = 960;
 
-  $('result').textContent = '';
-  $('details').textContent = '';
-  $('resultPanel').className = 'panel';
 
-  setStatus(
-    'Čekám na první QR kód.',
-    '1/2 · Načtěte první QR kód.'
-  );
+// Zvuková signalizace
+
+function beep(success) {
+
+    try {
+
+        if (!audioContext) return;
+
+        const oscillator =
+            audioContext.createOscillator();
+
+        const gain =
+            audioContext.createGain();
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+
+        oscillator.frequency.value =
+            success ? 1000 : 220;
+
+        gain.gain.value = 0.18;
+
+        oscillator.start();
+
+        oscillator.stop(
+            audioContext.currentTime +
+            (success ? 0.15 : 0.5)
+        );
+
+    } catch (error) {}
+
 }
 
-function updateCounts() {
-  $('okCount').textContent = ok;
-  $('badCount').textContent = bad;
-  $('totalCount').textContent = ok + bad;
-}
 
-function tone(match) {
-  try {
-    if (!audio) return;
-
-    const o = audio.createOscillator();
-    const g = audio.createGain();
-
-    o.connect(g);
-    g.connect(audio.destination);
-
-    o.frequency.value = match ? 880 : 220;
-    g.gain.value = .12;
-
-    o.start();
-    o.stop(audio.currentTime + .25);
-  } catch(e) {}
-}
-
-function finish(second, type) {
-  phase = 'done';
-
-  const match =
-    second === first &&
-    type !== firstType;
-
-  if (match) ok++;
-  else bad++;
-
-  updateCounts();
-  tone(match);
-
-  $('resultPanel').className =
-    'panel ' + (match ? 'success' : 'failure');
-
-  $('status').textContent =
-    match ? '✓ SHODA' : '✕ NESHODA';
-
-  $('result').textContent = match
-    ? second
-    : type === firstType
-      ? 'CHYBA – ' + type + ' 2×'
-      : 'KÓDY SE LIŠÍ';
-
-  $('details').textContent =
-    `První: ${firstType} – ${first} | Druhý: ${type} – ${second}`;
-
-  $('cameraHint').textContent =
-    'Kamera běží · stiskněte Další kontrola.';
-}
-
-// Rozpoznání polarity QR kódu
-function decodeFrame(image) {
-
-  if (typeof jsQR !== 'function') {
-    throw Error('QR knihovna se nenačetla.');
-  }
-
-  // Černý QR kód = BLOK
-  const normal = jsQR(
-    image.data,
-    image.width,
-    image.height,
-    { inversionAttempts: 'dontInvert' }
-  );
-
-  // Inverze obrazu
-  const inverted = new Uint8ClampedArray(image.data);
-
-  for (let i = 0; i < inverted.length; i += 4) {
-    inverted[i] = 255 - inverted[i];
-    inverted[i+1] = 255 - inverted[i+1];
-    inverted[i+2] = 255 - inverted[i+2];
-  }
-
-  // Bílý QR kód = DESKY
-  const reverse = jsQR(
-    inverted,
-    image.width,
-    image.height,
-    { inversionAttempts: 'dontInvert' }
-  );
-
-  return [
-    normal && {
-      value: normal.data,
-      type: 'BLOK'
-    },
-    reverse && {
-      value: reverse.data,
-      type: 'DESKY'
-    }
-  ].filter(Boolean);
-}
-
-function onNoQR() {
-  stable = null;
-  stableFrames = 0;
-
-  if (phase === 'waitRelease') {
-    missingFrames++;
-
-    if (missingFrames >= RELEASE_FRAMES) {
-      phase = 'second';
-
-      setStatus(
-        'První QR zmizel. Čekám na druhý.',
-        '2/2 · Načtěte druhý QR kód.'
-      );
-    }
-  }
-}
-
-function processQR(item) {
-  if (!item || !item.value) {
-    onNoQR();
-    return;
-  }
-
-  const value = String(item.value);
-  const type = item.type;
-
-  if (phase === 'done') return;
-
-  if (phase === 'waitRelease') {
-    missingFrames = 0;
-    return;
-  }
-
-  const key = JSON.stringify([value, type]);
-
-  if (stable === key) {
-    stableFrames++;
-  } else {
-    stable = key;
-    stableFrames = 1;
-  }
-
-  if (stableFrames < STABLE_FRAMES) return;
-
-  if (phase === 'first') {
-    first = value;
-    firstType = type;
-
-    phase = 'waitRelease';
-    missingFrames = 0;
-    stable = null;
-    stableFrames = 0;
-
-    setStatus(
-      `První QR: ${type} – ${value}`,
-      'Oddalte první QR kód z obrazu.'
-    );
-
-    return;
-  }
-
-  if (phase === 'second') {
-    finish(value, type);
-  }
-}
-
-async function scan() {
-
-  if (!stream || video.readyState < 2 || busy) {
-    return;
-  }
-
-  const now = performance.now();
-
-  if (now - lastReadAt < SCAN_INTERVAL) {
-    return;
-  }
-
-  lastReadAt = now;
-  busy = true;
-
-  const token = scanToken;
-
-  try {
-    const vw = video.videoWidth;
-    const vh = video.videoHeight;
-
-    if (!vw || !vh) return;
-
-    const scale = Math.min(
-      1,
-      800 / Math.max(vw, vh)
-    );
-
-    canvas.width = Math.round(vw * scale);
-    canvas.height = Math.round(vh * scale);
-
-    ctx.drawImage(
-      video,
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
-
-    const image = ctx.getImageData(
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
-
-    const items = await decodeFrame(image);
-
-    if (token !== scanToken) return;
-    if (phase === 'done') return;
-
-    if (!items.length) {
-      onNoQR();
-      return;
-    }
-
-    if (items.length > 1) {
-      missingFrames = 0;
-      stable = null;
-      stableFrames = 0;
-
-      setStatus(
-        'V záběru je více QR kódů.',
-        'Namiřte na jeden QR kód.'
-      );
-
-      return;
-    }
-
-    processQR(items[0], image);
-
-  } catch(err) {
-
-    if (phase !== 'done') {
-      $('cameraNote').textContent =
-        'Chyba čtení: ' + err.message;
-    }
-
-  } finally {
-    busy = false;
-  }
-}
-
-function runLoop() {
-  if (loopId !== null) return;
-
-  loopId = setInterval(
-    scan,
-    SCAN_INTERVAL
-  );
-}
+// Spuštění kamery
 
 async function startCamera() {
 
-  try {
-    audio = audio || new (
-      window.AudioContext ||
-      window.webkitAudioContext
-    )();
+    if (starting || running) return;
 
-    await audio.resume();
-  } catch(e) {}
+    starting = true;
 
-  if (stream) {
-    runLoop();
-    return;
-  }
+    const startButton =
+        document.getElementById("start");
 
-  if (!navigator.mediaDevices?.getUserMedia) {
-    setStatus(
-      'Tento prohlížeč nepodporuje kameru.'
-    );
-    return;
-  }
+    startButton.disabled = true;
 
-  $('start').disabled = true;
-  $('camState').textContent = 'Spouštím…';
+    try {
 
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        facingMode: {
-          ideal: 'environment'
-        },
-        width: {
-          ideal: 1280
-        },
-        height: {
-          ideal: 720
+        if (!audioContext) {
+
+            const Audio =
+                window.AudioContext ||
+                window.webkitAudioContext;
+
+            if (Audio) {
+                audioContext = new Audio();
+            }
+
         }
-      }
-    });
 
-    video.srcObject = stream;
-    await video.play();
+        if (audioContext) {
+            audioContext.resume().catch(() => {});
+        }
 
-    $('camState').textContent =
-      '● Kamera aktivní';
+        if (typeof jsQR !== "function") {
+            throw new Error(
+                "QR knihovna není dostupná."
+            );
+        }
 
-    $('cameraNote').textContent =
-      'Fotoaparát běží nepřetržitě. Po SHODĚ stačí stisknout Další kontrola.';
+        stream =
+            await navigator.mediaDevices.getUserMedia({
 
-    runLoop();
+                audio: false,
 
-    if (phase === 'first') {
-      setStatus(
-        'Čekám na první QR kód.',
-        '1/2 · Načtěte první QR kód.'
-      );
+                video: {
+                    facingMode: {
+                        ideal: "environment"
+                    },
+
+                    width: {
+                        ideal: 1280
+                    },
+
+                    height: {
+                        ideal: 720
+                    }
+                }
+
+            });
+
+        video.srcObject = stream;
+
+        await video.play();
+
+        running = true;
+
+        startButton.innerText =
+            "KAMERA AKTIVNÍ";
+
+        startButton.style.background =
+            "#166534";
+
+        document.getElementById(
+            "status"
+        ).innerText =
+            "Načtěte blok nebo desky";
+
+        scanLoop();
+
+    } catch (error) {
+
+        if (stream) {
+
+            stream.getTracks().forEach(
+                track => track.stop()
+            );
+
+        }
+
+        stream = null;
+        running = false;
+
+        startButton.disabled = false;
+
+        document.getElementById(
+            "status"
+        ).innerText =
+            "Nelze spustit kameru";
+
+        document.getElementById(
+            "note"
+        ).innerText = error.message;
+
+    } finally {
+
+        starting = false;
+
     }
 
-  } catch(err) {
+}
 
-    stream?.getTracks().forEach(t => t.stop());
-    stream = null;
 
-    $('camState').textContent =
-      'Kamera vypnutá';
+// Načtení konkrétní polarity
 
-    setStatus(
-      'Nelze spustit fotoaparát.'
+function decodeNormal(image) {
+
+    return jsQR(
+        image.data,
+        image.width,
+        image.height,
+        {
+            inversionAttempts: "dontInvert"
+        }
     );
 
-    $('cameraNote').textContent =
-      'Povolte přístup ke kameře v Safari. Detail: ' +
-      err.message;
-
-  } finally {
-
-    $('start').disabled = false;
-
-  }
 }
 
-function stopCamera() {
 
-  scanToken++;
+function decodeInverted(image) {
 
-  if (loopId !== null) {
-    clearInterval(loopId);
-    loopId = null;
-  }
+    // Inverzi provádí přímo QR knihovna.
+    // Není potřeba ručně kopírovat
+    // a invertovat celý obraz.
 
-  stream?.getTracks().forEach(t => t.stop());
+    return jsQR(
+        image.data,
+        image.width,
+        image.height,
+        {
+            inversionAttempts: "onlyInvert"
+        }
+    );
 
-  stream = null;
-  video.srcObject = null;
-
-  $('camState').textContent =
-    'Kamera vypnutá';
-
-  $('cameraHint').textContent =
-    'Fotoaparát je vypnutý.';
 }
 
-$('start').addEventListener(
-  'click',
-  startCamera
-);
 
-$('stop').addEventListener(
-  'click',
-  stopCamera
-);
+// Hlavní rychlá smyčka
 
-$('next').addEventListener('click', () => {
+function scanLoop() {
 
-  resetScan();
+    if (!running) return;
 
-  if (!stream) {
-    startCamera();
-  }
-});
+    animationId =
+        requestAnimationFrame(scanLoop);
+
+    if (finished) return;
+
+    if (video.readyState < 2) return;
+
+    const now = performance.now();
+
+    if (now - lastScan < SCAN_INTERVAL) {
+        return;
+    }
+
+    lastScan = now;
+
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+
+    if (!width || !height) return;
+
+    const scale = Math.min(
+        1,
+        SCAN_SIZE / Math.max(width, height)
+    );
+
+    const w = Math.round(width * scale);
+    const h = Math.round(height * scale);
+
+    if (
+        canvas.width !== w ||
+        canvas.height !== h
+    ) {
+
+        canvas.width = w;
+        canvas.height = h;
+
+    }
+
+    ctx.drawImage(
+        video,
+        0,
+        0,
+        w,
+        h
+    );
+
+    const image = ctx.getImageData(
+        0,
+        0,
+        w,
+        h
+    );
+
+    try {
+
+        // Pokud už máme blok,
+        // hledáme pouze bílé QR desek.
+
+        if (block !== null && cover === null) {
+
+            const qr = decodeInverted(image);
+
+            if (qr) {
+                acceptCover(qr.data);
+            }
+
+            return;
+
+        }
+
+        // Pokud už máme desky,
+        // hledáme pouze černé QR bloku.
+
+        if (cover !== null && block === null) {
+
+            const qr = decodeNormal(image);
+
+            if (qr) {
+                acceptBlock(qr.data);
+            }
+
+            return;
+
+        }
+
+        // Pokud zatím nemáme žádný kód,
+        // střídáme hledání obou polarit.
+
+        frameNumber++;
+
+        if (frameNumber % 2 === 0) {
+
+            const qr = decodeNormal(image);
+
+            if (qr) {
+                acceptBlock(qr.data);
+            }
+
+        } else {
+
+            const qr = decodeInverted(image);
+
+            if (qr) {
+                acceptCover(qr.data);
+            }
+
+        }
+
+    } catch (error) {
+
+        document.getElementById(
+            "note"
+        ).innerText =
+            "Chyba čtení QR: " + error.message;
+
+    }
+
+}
+
+
+// Načtení bloku
+
+function acceptBlock(value) {
+
+    if (
+        finished ||
+        block !== null ||
+        !value
+    ) return;
+
+    block = String(value);
+
+    document.getElementById(
+        "blockValue"
+    ).innerText = block;
+
+    document.getElementById(
+        "blockBox"
+    ).classList.add("loaded");
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        "BLOK OK – načtěte DESKY";
+
+    compareCodes();
+
+}
+
+
+// Načtení desek
+
+function acceptCover(value) {
+
+    if (
+        finished ||
+        cover !== null ||
+        !value
+    ) return;
+
+    cover = String(value);
+
+    document.getElementById(
+        "coverValue"
+    ).innerText = cover;
+
+    document.getElementById(
+        "coverBox"
+    ).classList.add("loaded");
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        "DESKY OK – načtěte BLOK";
+
+    compareCodes();
+
+}
+
+
+// Porovnání QR kódů
+
+function compareCodes() {
+
+    if (finished) return;
+
+    if (block === null || cover === null) {
+        return;
+    }
+
+    finished = true;
+
+    const result =
+        document.getElementById("result");
+
+    const status =
+        document.getElementById("status");
+
+    if (block === cover) {
+
+        result.innerText = "✓ SHODA";
+        result.className = "green";
+
+        status.innerText =
+            "BLOK A DESKY SOUHLASÍ";
+
+        okCount++;
+
+        beep(true);
+
+        if (navigator.vibrate) {
+            navigator.vibrate(100);
+        }
+
+    } else {
+
+        result.innerText = "✕ NESHODA";
+        result.className = "red";
+
+        status.innerText =
+            "POZOR – QR KÓDY SE LIŠÍ";
+
+        badCount++;
+
+        beep(false);
+
+        if (navigator.vibrate) {
+            navigator.vibrate([200, 100, 200]);
+        }
+
+    }
+
+    document.getElementById(
+        "okCount"
+    ).innerText = okCount;
+
+    document.getElementById(
+        "badCount"
+    ).innerText = badCount;
+
+    document.getElementById(
+        "totalCount"
+    ).innerText = okCount + badCount;
+
+}
+
+
+// Nová kontrola bez vypnutí kamery
+
+function nextCheck() {
+
+    block = null;
+    cover = null;
+    finished = false;
+    frameNumber = 0;
+    lastScan = 0;
+
+    document.getElementById(
+        "blockValue"
+    ).innerText = "Čekám na QR";
+
+    document.getElementById(
+        "coverValue"
+    ).innerText = "Čekám na QR";
+
+    document.getElementById(
+        "blockBox"
+    ).classList.remove("loaded");
+
+    document.getElementById(
+        "coverBox"
+    ).classList.remove("loaded");
+
+    document.getElementById(
+        "result"
+    ).innerText = "ČEKÁM";
+
+    document.getElementById(
+        "result"
+    ).className = "waiting";
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        "Načtěte blok nebo desky";
+
+    if (!running) {
+        startCamera();
+    }
+
+}
+
+
+// Ukončení kamery při odchodu
 
 window.addEventListener(
-  'pagehide',
-  stopCamera
+    "pagehide",
+    () => {
+
+        running = false;
+
+        if (animationId !== null) {
+            cancelAnimationFrame(animationId);
+        }
+
+        if (stream) {
+
+            stream.getTracks().forEach(
+                track => track.stop()
+            );
+
+        }
+
+        stream = null;
+        video.srcObject = null;
+
+        const button =
+            document.getElementById("start");
+
+        button.disabled = false;
+        button.innerText = "SPUSTIT KAMERU";
+        button.style.background = "#2563eb";
+
+    }
 );
 
-resetScan();
-
-})();
 </script>
 
 </body>
